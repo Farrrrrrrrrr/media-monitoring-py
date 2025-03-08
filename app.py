@@ -1,0 +1,303 @@
+from flask import Flask, render_template, request
+import feedparser
+from textblob import TextBlob
+import uuid
+import datetime
+from urllib.parse import urlparse, quote
+import requests
+import json
+import re
+
+app = Flask(__name__)
+
+# In-memory storage for articles (in a real app, you'd use a database)
+articles = {}
+
+def fetch_articles(search_query=None):
+    """
+    Fetch articles from RSS feeds and analyze sentiment
+    If search_query is provided, search for that topic
+    """
+    all_articles = []
+    
+    # Default feeds with Indonesian sources
+    default_feeds = [
+        # Indonesian news sources
+        "https://www.kompas.com/rss/",
+        "https://rss.tempo.co/",
+        "https://www.republika.co.id/rss/",
+        "https://www.detik.com/rss",
+        # International sources
+        "https://www.theguardian.com/world/rss",
+        "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"
+    ]
+    
+    # If we have a search query, build a list of targeted feeds
+    feeds = []
+    if search_query:
+        # Clear existing articles when performing a new search
+        articles.clear()
+        
+        # Detect if the search query might be in Indonesian
+        is_indonesian_query = contains_indonesian_words(search_query)
+        
+        # Google News RSS search (Indonesian version if detected)
+        if is_indonesian_query:
+            google_news = f"https://news.google.com/rss/search?q={quote(search_query)}&hl=id-ID&gl=ID&ceid=ID:id"
+        else:
+            google_news = f"https://news.google.com/rss/search?q={quote(search_query)}&hl=en-US&gl=US&ceid=US:en"
+        feeds.append(google_news)
+        
+        # Indonesian specific search
+        indonesian_search = f"https://news.google.com/rss/search?q={quote(search_query)}+Indonesia&hl=id-ID&gl=ID&ceid=ID:id"
+        feeds.append(indonesian_search)
+        
+        # Add topic-specific feeds from major news sources
+        topic_feeds = {
+            "technology": [
+                "https://www.theverge.com/rss/index.xml",
+                "https://feeds.wired.com/wired/index",
+                # Indonesian tech sources
+                "https://www.techno.id/rss",
+                "https://tekno.kompas.com/rss/"
+            ],
+            "politics": [
+                "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml",
+                # Indonesian politics sources
+                "https://nasional.kompas.com/rss/",
+                "https://rss.tempo.co/nasional"
+            ],
+            "business": [
+                "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+                # Indonesian business sources
+                "https://ekonomi.kompas.com/rss/",
+                "https://www.cnbcindonesia.com/rss"
+            ],
+            "health": [
+                "https://rss.nytimes.com/services/xml/rss/nyt/Health.xml",
+                # Indonesian health sources
+                "https://health.kompas.com/rss/",
+                "https://www.klikdokter.com/rss"
+            ],
+            "teknologi": [  # Indonesian word for technology
+                "https://tekno.kompas.com/rss/",
+                "https://www.techno.id/rss"
+            ],
+            "politik": [  # Indonesian word for politics
+                "https://nasional.kompas.com/rss/",
+                "https://rss.tempo.co/nasional"
+            ],
+            "bisnis": [  # Indonesian word for business
+                "https://ekonomi.kompas.com/rss/",
+                "https://www.cnbcindonesia.com/rss"
+            ],
+            "kesehatan": [  # Indonesian word for health
+                "https://health.kompas.com/rss/",
+                "https://www.klikdokter.com/rss"
+            ]
+        }
+        
+        # Check if search query matches any of our predefined topics (in English or Indonesian)
+        for topic, topic_feed_list in topic_feeds.items():
+            if re.search(r'\b' + re.escape(topic) + r'\b', search_query.lower()):
+                feeds.extend(topic_feed_list)
+    else:
+        feeds = default_feeds
+    
+    # Process each feed
+    for feed_url in feeds:
+        try:
+            feed = feedparser.parse(feed_url)
+            
+            for entry in feed.entries[:10]:  # Limit to 10 articles per feed
+                try:
+                    # Skip if article with the same title exists
+                    # Make sure we have a title
+                    if not hasattr(entry, 'title'):
+                        continue
+                    
+                    # Ensure title is a string
+                    title = entry.title
+                    if not isinstance(title, str):
+                        title = str(title)
+                    
+                    if any(a['title'] == title for a in all_articles):
+                        continue
+                        
+                    # Generate a unique ID for each article
+                    article_id = str(uuid.uuid4())
+                    
+                    # Get publication date or use current time if not available
+                    pub_date = entry.get('published_parsed', None)
+                    if pub_date:
+                        try:
+                            pub_date = datetime.datetime(*pub_date[:6])
+                        except Exception:
+                            pub_date = datetime.datetime.now()
+                    else:
+                        pub_date = datetime.datetime.now()
+                        
+                    # Perform sentiment analysis
+                    # TextBlob doesn't work well for Indonesian, but we'll use it as a fallback
+                    is_indonesian = contains_indonesian_words(title)
+                    analysis = analyze_sentiment(title, is_indonesian)
+                    sentiment_score = analysis.sentiment.polarity
+                    sentiment_label = "Positif" if sentiment_score > 0 else "Negatif" if sentiment_score < 0 else "Netral"
+                    
+                    if not is_indonesian:  # Use English labels for non-Indonesian content
+                        sentiment_label = "Positive" if sentiment_score > 0 else "Negative" if sentiment_score < 0 else "Neutral"
+                    
+                    # Extract source name from feed URL or entry
+                    link = getattr(entry, 'link', feed_url)
+                    if not isinstance(link, str):
+                        link = str(link)
+                        
+                    source_url = link
+                    source = urlparse(source_url).netloc.replace('www.', '').split('.')[0].capitalize()
+                    
+                    # Better source detection, with special handling for Indonesian sources
+                    if source == 'News' or source == 'Google':
+                        # Try to extract real source from entry source or title
+                        if hasattr(entry, 'source'):
+                            entry_source = getattr(entry, 'source')
+                            if isinstance(entry_source, str):
+                                source = entry_source
+                        elif isinstance(title, str) and ' - ' in title:
+                            # Many titles end with " - Source Name"
+                            source = title.split(' - ')[-1]
+                    
+                    # Check for common Indonesian sources and clean up names
+                    indonesian_sources = {
+                        'kompas': 'Kompas', 
+                        'detik': 'Detik', 
+                        'tempo': 'Tempo',
+                        'republika': 'Republika', 
+                        'liputan6': 'Liputan 6',
+                        'tribunnews': 'Tribun News',
+                        'cnbcindonesia': 'CNBC Indonesia',
+                        'klikdokter': 'Klik Dokter'
+                    }
+                    
+                    for key, value in indonesian_sources.items():
+                        if key in source.lower():
+                            source = value
+                            break
+                    
+                    # Determine language of article
+                    language = 'id' if is_indonesian else 'en'
+                    
+                    # Get summary, with a fallback
+                    summary = getattr(entry, 'summary', 'No summary available')
+                    if not isinstance(summary, str):
+                        summary = str(summary)
+                    
+                    article = {
+                        'id': article_id,
+                        'title': title,
+                        'summary': summary,
+                        'link': link,
+                        'published': pub_date,
+                        'source': source,
+                        'sentiment_score': round(sentiment_score, 2),
+                        'sentiment_label': sentiment_label,
+                        'sentiment_color': get_sentiment_color(sentiment_score),
+                        'language': language
+                    }
+                    
+                    articles[article_id] = article
+                    all_articles.append(article)
+                except Exception as e:
+                    print(f"Error processing entry: {e}")
+                    continue  # Skip this problematic entry
+        except Exception as e:
+            print(f"Error fetching from {feed_url}: {e}")
+    
+    return sorted(all_articles, key=lambda x: x['published'], reverse=True)
+
+def contains_indonesian_words(text):
+    """
+    Simple check if text might be Indonesian by looking for common Indonesian words
+    A more sophisticated approach would use a language detection library
+    """
+    # First, check if the input is a string
+    if not isinstance(text, str):
+        try:
+            text = str(text)
+        except:
+            return False
+    
+    # Ensure we have a non-empty string
+    if not text:
+        return False
+    
+    common_indonesian_words = [
+        'dan', 'atau', 'yang', 'di', 'ini', 'itu', 'dengan', 'untuk', 'dalam', 'tidak',
+        'pada', 'dari', 'jika', 'maka', 'akan', 'oleh', 'saya', 'kamu', 'mereka', 'kami',
+        'indonesia', 'jakarta', 'adalah', 'bisa', 'dapat', 'tahun', 'menurut', 'tentang'
+    ]
+    
+    try:
+        # Convert to lowercase and split into words
+        words = text.lower().split()
+        
+        # Check if any common Indonesian words are in the text
+        for word in words:
+            if word in common_indonesian_words:
+                return True
+    except Exception:
+        # If any error occurs in processing, assume it's not Indonesian
+        return False
+    
+    return False
+
+def analyze_sentiment(text, is_indonesian=False):
+    """
+    Analyze sentiment of text
+    For Indonesian text, we'd use a specialized model, but TextBlob as fallback
+    """
+    # Ensure we have a valid string
+    if not isinstance(text, str) or not text:
+        return TextBlob("")  # Return neutral sentiment for empty text
+        
+    try:
+        # In a real implementation, you could use a proper Indonesian sentiment model
+        # For now, we'll use TextBlob for both languages
+        return TextBlob(text)
+    except Exception:
+        # If TextBlob fails, return a neutral sentiment
+        return TextBlob("")
+
+def get_sentiment_color(score):
+    """Return a color based on sentiment score"""
+    if score > 0.3:
+        return "success"  # very positive - green
+    elif score > 0:
+        return "info"     # somewhat positive - blue
+    elif score > -0.3:
+        return "warning"  # somewhat negative - yellow
+    else:
+        return "danger"   # very negative - red
+
+@app.route('/')
+def home():
+    """Home page - display list of articles with sentiment analysis"""
+    search_query = request.args.get('query', None)
+    article_list = fetch_articles(search_query)
+    return render_template('index.html', articles=article_list, request=request)
+
+@app.route('/article/<article_id>')
+def article_detail(article_id):
+    """Article detail page"""
+    if article_id not in articles:
+        # If we don't have the article in memory, re-fetch all articles
+        search_query = request.args.get('query', None)
+        fetch_articles(search_query)
+    
+    article = articles.get(article_id, None)
+    if not article:
+        return "Article not found", 404
+        
+    return render_template('article.html', article=article)
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0')

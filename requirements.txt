@@ -1,0 +1,7 @@
+Flask==2.0.1
+feedparser==6.0.8
+textblob==0.15.3
+flask-bootstrap==3.3.7.1
+requests==2.27.1
+# langdetect would be useful for better language detection
+langdetect==1.0.9

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ article.title }} - MediaMon</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">Media Monitoring</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">
+                            {{ "Detail Artikel" if article.language == 'id' else "Article Detail" }}
+                        </li>
+                    </ol>
+                </nav>
+                
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>{{ article.source }}</span>
+                        <div>
+                            <span class="badge bg-{{ article.sentiment_color }} me-2">
+                                {{ article.sentiment_label }} ({{ article.sentiment_score }})
+                            </span>
+                            <span class="badge bg-light text-dark">
+                                {{ "Bahasa Indonesia" if article.language == 'id' else "English" }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h1 class="card-title">{{ article.title }}</h1>
+                        <p class="card-text text-muted">
+                            {{ "Diterbitkan pada" if article.language == 'id' else "Published on" }} 
+                            {{ article.published.strftime('%Y-%m-%d at %H:%M') }}
+                        </p>
+                        
+                        <div class="summary my-4">
+                            <h5>{{ "Ringkasan" if article.language == 'id' else "Summary" }}:</h5>
+                            <p>{{ article.summary|safe }}</p>
+                        </div>
+                        
+                        <div class="sentiment-analysis mb-4">
+                            <h5>{{ "Analisis Sentimen" if article.language == 'id' else "Sentiment Analysis" }}:</h5>
+                            <div class="progress">
+                                <div class="progress-bar bg-{{ article.sentiment_color }}" 
+                                     role="progressbar" 
+                                     style="width: {{ (article.sentiment_score + 1) / 2 * 100 }}%"
+                                     aria-valuenow="{{ article.sentiment_score }}" 
+                                     aria-valuemin="-1" 
+                                     aria-valuemax="1">
+                                    {{ article.sentiment_score }}
+                                </div>
+                            </div>
+                            <small class="d-flex justify-content-between mt-1">
+                                <span>{{ "Sangat Negatif" if article.language == 'id' else "Very Negative" }} (-1.0)</span>
+                                <span>{{ "Netral" if article.language == 'id' else "Neutral" }} (0.0)</span>
+                                <span>{{ "Sangat Positif" if article.language == 'id' else "Very Positive" }} (1.0)</span>
+                            </small>
+                        </div>
+                        
+                        <a href="{{ article.link }}" class="btn btn-primary" target="_blank">
+                            {{ "Baca Artikel Lengkap" if article.language == 'id' else "Read Full Article" }}
+                        </a>
+                        <a href="/" class="btn btn-secondary">
+                            {{ "Kembali ke Daftar" if article.language == 'id' else "Back to List" }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-light text-center text-muted py-3 mt-5">
+        <div class="container">
+            <p>Farrell Media Monitoring &copy; 2023 - Aplikasi pemantauan media untuk pasar Indonesia<br>
+            (A media monitoring application for the Indonesian market)</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body>
+</html>
