@@ -1,7 +1,15 @@
 Flask==2.0.1
+# Pin Werkzeug version to be compatible with Flask 2.0.1
+Werkzeug==2.0.3
 feedparser==6.0.8
 textblob==0.15.3
 flask-bootstrap==3.3.7.1
 requests==2.27.1
-# langdetect would be useful for better language detection
 langdetect==1.0.9
+# Using specific lxml version that includes html_clean
+lxml[html_clean]>=4.9.3
+# Social media libraries
+tweepy==4.12.1
+facebook-scraper==0.2.59
+instaloader==4.9.5
+python-dotenv==1.0.0

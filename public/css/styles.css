@@ -1,0 +1,139 @@
+/* Custom styles for MediaMon application */
+
+body {
+    padding-bottom: 40px;
+    background-color: #f8f9fa;
+}
+
+.article-list .list-group-item {
+    transition: all 0.2s;
+}
+
+.article-list .list-group-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.sentiment-summary .card {
+    transition: all 0.3s;
+}
+
+.sentiment-summary .card:hover {
+    transform: translateY(-5px);
+}
+
+.progress {
+    height: 2rem;
+}
+
+footer {
+    margin-top: 2rem;
+}
+
+/* Search form styles */
+.search-form {
+    position: relative;
+}
+
+.search-form .form-control {
+    border-radius: 50px 0 0 50px;
+    padding-right: 40px;
+}
+
+.search-form .btn-primary {
+    border-radius: 0 50px 50px 0;
+}
+
+.search-form .btn-outline-secondary {
+    border-radius: 50px;
+}
+
+/* Popular topics */
+.popular-topics .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.popular-topics .badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Language filter */
+.filter-btn {
+    margin-right: 5px;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Social media post styling */
+.social-post {
+    border-left: 4px solid #1da1f2; /* Twitter blue */
+    padding-left: 15px;
+    position: relative;
+}
+
+.social-post.twitter {
+    border-left-color: #1da1f2; /* Twitter blue */
+}
+
+.social-post.facebook {
+    border-left-color: #4267B2; /* Facebook blue */
+}
+
+.social-post.instagram {
+    border-left-color: #E1306C; /* Instagram pink/purple */
+}
+
+/* Media type selector */
+.media-type-selector {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Social icon styling */
+.fa-twitter, .fa-facebook, .fa-instagram {
+    margin-right: 5px;
+}
+
+.fa-twitter {
+    color: #1da1f2;
+}
+
+.fa-facebook {
+    color: #4267B2;
+}
+
+.fa-instagram {
+    color: #E1306C;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sentiment-summary .card-text {
+        font-size: 2rem;
+    }
+    
+    .search-form {
+        flex-wrap: wrap;
+    }
+    
+    .search-form .form-control {
+        width: 100%;
+        border-radius: 50px;
+        margin-bottom: 10px;
+    }
+    
+    .search-form .btn-primary, 
+    .search-form .btn-outline-secondary {
+        width: 100%;
+        border-radius: 50px;
+        margin: 5px 0;
+    }
+}

@@ -64,6 +64,55 @@ footer {
     margin-right: 5px;
 }
 
+/* Social media post styling */
+.social-post {
+    border-left: 4px solid #1da1f2; /* Twitter blue */
+    padding-left: 15px;
+}
+
+.social-post.twitter {
+    border-left-color: #1da1f2; /* Twitter blue */
+}
+
+.social-post.facebook {
+    border-left-color: #4267B2; /* Facebook blue */
+}
+
+.social-post.instagram {
+    border-left-color: #E1306C; /* Instagram pink/purple */
+}
+
+.social-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.source-filter-btn {
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+/* Media type selector */
+.media-type-selector {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.media-type-selector label {
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.media-type-selector input {
+    margin-right: 5px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .sentiment-summary .card-text {

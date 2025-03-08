@@ -7,15 +7,337 @@ from urllib.parse import urlparse, quote
 import requests
 import json
 import re
+import os
+import tweepy
+from facebook_scraper import get_posts
+import instaloader
 
 app = Flask(__name__)
 
 # In-memory storage for articles (in a real app, you'd use a database)
 articles = {}
 
+# Social media API configuration
+class SocialMediaConfig:
+    # Twitter API credentials
+    TWITTER_API_KEY = os.environ.get('TWITTER_API_KEY', '')
+    TWITTER_API_SECRET = os.environ.get('TWITTER_API_SECRET', '')
+    TWITTER_ACCESS_TOKEN = os.environ.get('TWITTER_ACCESS_TOKEN', '')
+    TWITTER_ACCESS_SECRET = os.environ.get('TWITTER_ACCESS_SECRET', '')
+    
+    # Facebook credentials (for facebook-scraper)
+    FACEBOOK_EMAIL = os.environ.get('FACEBOOK_EMAIL', '')
+    FACEBOOK_PASSWORD = os.environ.get('FACEBOOK_PASSWORD', '')
+    
+    # Instagram credentials
+    INSTAGRAM_USERNAME = os.environ.get('INSTAGRAM_USERNAME', '')
+    INSTAGRAM_PASSWORD = os.environ.get('INSTAGRAM_PASSWORD', '')
+
+    # Social media sources enabled status
+    TWITTER_ENABLED = bool(TWITTER_API_KEY and TWITTER_API_SECRET)
+    FACEBOOK_ENABLED = bool(FACEBOOK_EMAIL and FACEBOOK_PASSWORD)
+    INSTAGRAM_ENABLED = bool(INSTAGRAM_USERNAME and INSTAGRAM_PASSWORD)
+
+def fetch_twitter_posts(search_query=None, count=10):
+    """Fetch tweets related to a search query"""
+    if not SocialMediaConfig.TWITTER_ENABLED:
+        print("Twitter API credentials not configured")
+        return []
+    
+    try:
+        # Set up Twitter API client
+        auth = tweepy.OAuthHandler(
+            SocialMediaConfig.TWITTER_API_KEY, 
+            SocialMediaConfig.TWITTER_API_SECRET
+        )
+        auth.set_access_token(
+            SocialMediaConfig.TWITTER_ACCESS_TOKEN, 
+            SocialMediaConfig.TWITTER_ACCESS_SECRET
+        )
+        api = tweepy.API(auth)
+        
+        # Search for tweets
+        tweets = []
+        if search_query:
+            # Search tweets with query
+            search_results = api.search_tweets(q=search_query, count=count, tweet_mode='extended')
+            tweets.extend(search_results)
+        else:
+            # Get home timeline tweets if no query
+            home_tweets = api.home_timeline(count=count, tweet_mode='extended')
+            tweets.extend(home_tweets)
+        
+        # Process tweets into our article format
+        twitter_articles = []
+        for tweet in tweets:
+            # Extract text (handling both normal and extended tweets)
+            if hasattr(tweet, 'full_text'):
+                text = tweet.full_text
+            else:
+                text = tweet.text
+            
+            # Skip retweets to avoid duplication
+            if hasattr(tweet, 'retweeted_status'):
+                continue
+                
+            # Perform sentiment analysis
+            is_indonesian = contains_indonesian_words(text)
+            analysis = analyze_sentiment(text, is_indonesian)
+            sentiment_score = analysis.sentiment.polarity
+            
+            sentiment_label = "Positif" if sentiment_score > 0 else "Negatif" if sentiment_score < 0 else "Netral"
+            if not is_indonesian:
+                sentiment_label = "Positive" if sentiment_score > 0 else "Negative" if sentiment_score < 0 else "Neutral"
+            
+            article_id = f"twitter_{tweet.id}"
+            
+            # Create article object
+            article = {
+                'id': article_id,
+                'title': f"@{tweet.user.screen_name}: {text[:50]}...",
+                'summary': text,
+                'link': f"https://twitter.com/{tweet.user.screen_name}/status/{tweet.id}",
+                'published': tweet.created_at,
+                'source': 'Twitter',
+                'sentiment_score': round(sentiment_score, 2),
+                'sentiment_label': sentiment_label,
+                'sentiment_color': get_sentiment_color(sentiment_score),
+                'language': 'id' if is_indonesian else 'en',
+                'user': tweet.user.screen_name,
+                'profile_image': tweet.user.profile_image_url_https,
+                'type': 'twitter'
+            }
+            
+            # Store in our articles dict and return list
+            articles[article_id] = article
+            twitter_articles.append(article)
+            
+        return twitter_articles
+        
+    except Exception as e:
+        print(f"Error fetching Twitter data: {e}")
+        return []
+
+def fetch_facebook_posts(search_query=None, pages=None, count=5):
+    """Fetch Facebook posts from specific pages or search"""
+    if not SocialMediaConfig.FACEBOOK_ENABLED:
+        print("Facebook credentials not configured")
+        return []
+    
+    if pages is None:
+        # Default Indonesian news pages to monitor
+        pages = ['detikcom', 'kompascom', 'tribunnews']
+    
+    facebook_articles = []
+    
+    try:
+        # For each page, get recent posts
+        for page in pages:
+            try:
+                # Get posts from the page
+                posts = list(get_posts(
+                    page, 
+                    pages=1,
+                    credentials=(SocialMediaConfig.FACEBOOK_EMAIL, SocialMediaConfig.FACEBOOK_PASSWORD),
+                    options={"posts_per_page": count}
+                ))
+                
+                # Process posts
+                for post in posts:
+                    # Skip posts without text
+                    if not post.get('text'):
+                        continue
+                    
+                    text = post.get('text')
+                    
+                    # If search query provided, skip non-matching posts
+                    if search_query and search_query.lower() not in text.lower():
+                        continue
+                    
+                    # Perform sentiment analysis
+                    is_indonesian = contains_indonesian_words(text)
+                    analysis = analyze_sentiment(text, is_indonesian)
+                    sentiment_score = analysis.sentiment.polarity
+                    
+                    sentiment_label = "Positif" if sentiment_score > 0 else "Negatif" if sentiment_score < 0 else "Netral"
+                    if not is_indonesian:
+                        sentiment_label = "Positive" if sentiment_score > 0 else "Negative" if sentiment_score < 0 else "Neutral"
+                    
+                    article_id = f"facebook_{post.get('post_id')}"
+                    
+                    # Get publication date
+                    pub_date = post.get('time')
+                    if not pub_date:
+                        pub_date = datetime.datetime.now()
+                    
+                    # Create article object
+                    article = {
+                        'id': article_id,
+                        'title': f"Facebook: {text[:50]}...",
+                        'summary': text,
+                        'link': post.get('post_url'),
+                        'published': pub_date,
+                        'source': f"Facebook/{page}",
+                        'sentiment_score': round(sentiment_score, 2),
+                        'sentiment_label': sentiment_label,
+                        'sentiment_color': get_sentiment_color(sentiment_score),
+                        'language': 'id' if is_indonesian else 'en',
+                        'user': page,
+                        'type': 'facebook'
+                    }
+                    
+                    # Store and append
+                    articles[article_id] = article
+                    facebook_articles.append(article)
+                    
+            except Exception as e:
+                print(f"Error fetching posts from Facebook page {page}: {e}")
+                continue
+                
+        return facebook_articles
+        
+    except Exception as e:
+        print(f"Error with Facebook scraper: {e}")
+        return []
+
+def fetch_instagram_posts(search_query=None, accounts=None, count=5):
+    """Fetch Instagram posts from specific accounts or hashtag search"""
+    if not SocialMediaConfig.INSTAGRAM_ENABLED:
+        print("Instagram credentials not configured")
+        return []
+    
+    if accounts is None:
+        # Default Indonesian news accounts
+        accounts = ['detikcom', 'kompascom', 'tribunnews']
+    
+    instagram_articles = []
+    
+    try:
+        # Set up Instagram loader
+        loader = instaloader.Instaloader()
+        
+        # Login if credentials provided
+        if SocialMediaConfig.INSTAGRAM_USERNAME and SocialMediaConfig.INSTAGRAM_PASSWORD:
+            try:
+                loader.login(SocialMediaConfig.INSTAGRAM_USERNAME, SocialMediaConfig.INSTAGRAM_PASSWORD)
+            except Exception as e:
+                print(f"Instagram login failed: {e}")
+        
+        # Process based on search type
+        if search_query and search_query.startswith('#'):
+            # Search by hashtag
+            hashtag = search_query.replace('#', '')
+            posts = loader.get_hashtag_posts(hashtag)
+            
+            # Limit number of posts
+            post_count = 0
+            for post in posts:
+                if post_count >= count:
+                    break
+                
+                try:
+                    # Get post text
+                    text = post.caption if post.caption else "No caption"
+                    
+                    # Perform sentiment analysis
+                    is_indonesian = contains_indonesian_words(text)
+                    analysis = analyze_sentiment(text, is_indonesian)
+                    sentiment_score = analysis.sentiment.polarity
+                    
+                    sentiment_label = "Positif" if sentiment_score > 0 else "Negatif" if sentiment_score < 0 else "Netral"
+                    if not is_indonesian:
+                        sentiment_label = "Positive" if sentiment_score > 0 else "Negative" if sentiment_score < 0 else "Neutral"
+                    
+                    article_id = f"instagram_{post.shortcode}"
+                    
+                    # Create article object
+                    article = {
+                        'id': article_id,
+                        'title': f"Instagram: {text[:50]}...",
+                        'summary': text,
+                        'link': f"https://www.instagram.com/p/{post.shortcode}/",
+                        'published': post.date_local,
+                        'source': f"Instagram/{post.owner_username}",
+                        'sentiment_score': round(sentiment_score, 2),
+                        'sentiment_label': sentiment_label,
+                        'sentiment_color': get_sentiment_color(sentiment_score),
+                        'language': 'id' if is_indonesian else 'en',
+                        'user': post.owner_username,
+                        'type': 'instagram'
+                    }
+                    
+                    # Store and append
+                    articles[article_id] = article
+                    instagram_articles.append(article)
+                    post_count += 1
+                    
+                except Exception as e:
+                    print(f"Error processing Instagram post: {e}")
+                    continue
+                    
+        else:
+            # Get posts from specified accounts
+            for username in accounts:
+                try:
+                    profile = instaloader.Profile.from_username(loader.context, username)
+                    posts = profile.get_posts()
+                    
+                    post_count = 0
+                    for post in posts:
+                        if post_count >= count:
+                            break
+                            
+                        text = post.caption if post.caption else "No caption"
+                        
+                        # If search query provided, skip non-matching posts
+                        if search_query and search_query.lower() not in text.lower():
+                            continue
+                        
+                        # Perform sentiment analysis
+                        is_indonesian = contains_indonesian_words(text)
+                        analysis = analyze_sentiment(text, is_indonesian)
+                        sentiment_score = analysis.sentiment.polarity
+                        
+                        sentiment_label = "Positif" if sentiment_score > 0 else "Negatif" if sentiment_score < 0 else "Netral"
+                        if not is_indonesian:
+                            sentiment_label = "Positive" if sentiment_score > 0 else "Negative" if sentiment_score < 0 else "Neutral"
+                        
+                        article_id = f"instagram_{post.shortcode}"
+                        
+                        # Create article object
+                        article = {
+                            'id': article_id,
+                            'title': f"Instagram: {text[:50]}...",
+                            'summary': text,
+                            'link': f"https://www.instagram.com/p/{post.shortcode}/",
+                            'published': post.date_local,
+                            'source': f"Instagram/{username}",
+                            'sentiment_score': round(sentiment_score, 2),
+                            'sentiment_label': sentiment_label,
+                            'sentiment_color': get_sentiment_color(sentiment_score),
+                            'language': 'id' if is_indonesian else 'en',
+                            'user': username,
+                            'type': 'instagram'
+                        }
+                        
+                        # Store and append
+                        articles[article_id] = article
+                        instagram_articles.append(article)
+                        post_count += 1
+                        
+                except Exception as e:
+                    print(f"Error fetching Instagram posts from {username}: {e}")
+                    continue
+                    
+        return instagram_articles
+        
+    except Exception as e:
+        print(f"Error with Instagram loader: {e}")
+        return []
+
 def fetch_articles(search_query=None):
     """
-    Fetch articles from RSS feeds and analyze sentiment
+    Fetch articles from RSS feeds and social media, then analyze sentiment
     If search_query is provided, search for that topic
     """
     all_articles = []
@@ -201,7 +523,8 @@ def fetch_articles(search_query=None):
                         'sentiment_score': round(sentiment_score, 2),
                         'sentiment_label': sentiment_label,
                         'sentiment_color': get_sentiment_color(sentiment_score),
-                        'language': language
+                        'language': language,
+                        'type': 'news' # Mark as news article type
                     }
                     
                     articles[article_id] = article
@@ -211,6 +534,22 @@ def fetch_articles(search_query=None):
                     continue  # Skip this problematic entry
         except Exception as e:
             print(f"Error fetching from {feed_url}: {e}")
+    
+    # Add social media content
+    try:
+        # Fetch from Twitter if enabled
+        twitter_articles = fetch_twitter_posts(search_query)
+        all_articles.extend(twitter_articles)
+        
+        # Fetch from Facebook if enabled
+        facebook_articles = fetch_facebook_posts(search_query)
+        all_articles.extend(facebook_articles)
+        
+        # Fetch from Instagram if enabled
+        instagram_articles = fetch_instagram_posts(search_query)
+        all_articles.extend(instagram_articles)
+    except Exception as e:
+        print(f"Error fetching social media content: {e}")
     
     return sorted(all_articles, key=lambda x: x['published'], reverse=True)
 

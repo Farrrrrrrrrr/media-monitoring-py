@@ -35,15 +35,40 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.add('active');
             
             // Filter articles
-            articles.forEach(article => {
-                const articleLanguage = article.getAttribute('data-language');
-                
-                if (language === 'all' || language === articleLanguage) {
-                    article.style.display = '';
-                } else {
-                    article.style.display = 'none';
-                }
-            });
+            filterArticles();
         });
     });
+    
+    // Source type checkboxes
+    const sourceTypeCheckboxes = document.querySelectorAll('.source-type-checkbox');
+    sourceTypeCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            filterArticles();
+        });
+    });
+    
+    // Function to filter articles by both language and source type
+    function filterArticles() {
+        const selectedLanguage = document.querySelector('.filter-btn.active').getAttribute('data-language');
+        
+        // Get selected source types
+        const selectedSources = Array.from(document.querySelectorAll('.source-type-checkbox:checked'))
+            .map(checkbox => checkbox.value);
+            
+        // Filter articles
+        const articles = document.querySelectorAll('.article-list .list-group-item');
+        articles.forEach(article => {
+            const articleLanguage = article.getAttribute('data-language');
+            const articleSource = article.getAttribute('data-source');
+            
+            const languageMatch = selectedLanguage === 'all' || articleLanguage === selectedLanguage;
+            const sourceMatch = selectedSources.includes(articleSource);
+            
+            if (languageMatch && sourceMatch) {
+                article.style.display = '';
+            } else {
+                article.style.display = 'none';
+            }
+        });
+    }
 });

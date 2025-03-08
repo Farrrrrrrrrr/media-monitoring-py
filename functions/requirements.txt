@@ -1,0 +1,16 @@
+firebase-admin==6.2.0
+firebase-functions==0.1.1
+flask==2.0.1
+# Pin Werkzeug version to be compatible with Flask 2.0.1
+Werkzeug==2.0.3
+feedparser==6.0.8
+textblob==0.15.3
+requests==2.27.1
+nltk==3.8.1
+# Using specific lxml version that includes html_clean
+lxml[html_clean]>=4.9.3
+# Social media libraries
+tweepy==4.12.1
+facebook-scraper==0.2.59
+instaloader==4.9.5
+python-dotenv==1.0.0
