@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - Media Monitoring</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+    <!-- Syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+    <style>
+        .endpoint {
+            border-left: 4px solid #6c757d;
+            padding-left: 15px;
+            margin-bottom: 30px;
+        }
+        .get { border-left-color: #28a745; }
+        .post { border-left-color: #007bff; }
+        .method {
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: white;
+            margin-right: 8px;
+        }
+        .method.get { background-color: #28a745; }
+        .method.post { background-color: #007bff; }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .api-url {
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">Media Monitoring</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/api/docs">API Docs</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        <h1>Media Monitoring API Documentation</h1>
+        <p class="lead">This API allows you to access news and social media articles with sentiment analysis.</p>
+        
+        <div class="alert alert-info">
+            <strong>Base URL:</strong> 
+            <code>https://your-domain.com/api/v1</code> or
+            <code>https://your-firebase-project.web.app/api/v1</code>
+        </div>
+        
+        <h2 class="mt-5">Authentication</h2>
+        <p>All API calls require authentication using a Bearer token, which you can get from the auth endpoint.</p>
+        
+        <div class="endpoint post">
+            <h3><span class="method post">POST</span> /auth/token</h3>
+            <p>Get an authentication token using your API key.</p>
+            
+            <h5>Request</h5>
+            <div class="api-url">POST /api/v1/auth/token</div>
+            <pre><code class="language-json">{
+    "api_key": "your-api-key"
+}</code></pre>
+            
+            <h5>Response</h5>
+            <pre><code class="language-json">{
+    "status": "success",
+    "timestamp": "2023-08-21T12:34:56.789Z",
+    "message": "Authentication successful",
+    "data": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
+}</code></pre>
+        </div>
+        
+        <h2 class="mt-5">Articles</h2>
+        
+        <div class="endpoint get">
+            <h3><span class="method get">GET</span> /articles</h3>
+            <p>Get articles with optional filtering.</p>
+            
+            <h5>Parameters</h5>
+            <ul>
+                <li><code>query</code> - Optional search term</li>
+                <li><code>source</code> - Optional filter by source type (news, twitter, facebook, instagram)</li>
+                <li><code>language</code> - Optional filter by language (id, en)</li>
+                <li><code>limit</code> - Optional limit number of results (default: 30, max: 100)</li>
+            </ul>
+            
+            <h5>Request</h5>
+            <div class="api-url">GET /api/v1/articles?query=politik&language=id&limit=10</div>
+            
+            <h5>Headers</h5>
+            <pre><code>Authorization: Bearer your-token-here</code></pre>
+            
+            <h5>Response</h5>
+            <pre><code class="language-json">{
+    "status": "success",
+    "timestamp": "2023-08-21T12:34:56.789Z",
+    "message": "Retrieved 10 articles",
+    "data": [
+        {
+            "id": "abc123",
+            "title": "Example Article Title",
+            "summary": "Article summary text...",
+            "link": "https://example.com/article",
+            "published": "2023-08-21T10:30:00",
+            "source": "Kompas",
+            "sentiment_score": 0.25,
+            "sentiment_label": "Positif",
+            "sentiment_color": "info",
+            "language": "id",
+            "type": "news"
+        },
+        // ... more articles ...
+    ]
+}</code></pre>
+        </div>
+        
+        <div class="endpoint get">
+            <h3><span class="method get">GET</span> /articles/{id}</h3>
+            <p>Get a specific article by ID.</p>
+            
+            <h5>Request</h5>
+            <div class="api-url">GET /api/v1/articles/abc123</div>
+            
+            <h5>Headers</h5>
+            <pre><code>Authorization: Bearer your-token-here</code></pre>
+            
+            <h5>Response</h5>
+            <pre><code class="language-json">{
+    "status": "success",
+    "timestamp": "2023-08-21T12:34:56.789Z",
+    "message": "Article retrieved successfully",
+    "data": {
+        "id": "abc123",
+        "title": "Example Article Title",
+        "summary": "Article summary text...",
+        "link": "https://example.com/article",
+        "published": "2023-08-21T10:30:00",
+        "source": "Kompas",
+        "sentiment_score": 0.25,
+        "sentiment_label": "Positif",
+        "sentiment_color": "info",
+        "language": "id",
+        "type": "news"
+    }
+}</code></pre>
+        </div>
+        
+        <h2 class="mt-5">Sources</h2>
+        
+        <div class="endpoint get">
+            <h3><span class="method get">GET</span> /sources</h3>
+            <p>Get available news and social media sources.</p>
+            
+            <h5>Request</h5>
+            <div class="api-url">GET /api/v1/sources</div>
+            
+            <h5>Headers</h5>
+            <pre><code>Authorization: Bearer your-token-here</code></pre>
+            
+            <h5>Response</h5>
+            <pre><code class="language-json">{
+    "status": "success",
+    "timestamp": "2023-08-21T12:34:56.789Z",
+    "message": "Available sources retrieved",
+    "data": {
+        "news": [
+            {"id": "kompas", "name": "Kompas", "language": "id"},
+            {"id": "tempo", "name": "Tempo", "language": "id"},
+            // ... more news sources ...
+        ],
+        "social_media": [
+            {"id": "twitter", "name": "Twitter", "enabled": true},
+            {"id": "facebook", "name": "Facebook", "enabled": true},
+            {"id": "instagram", "name": "Instagram", "enabled": true}
+        ]
+    }
+}</code></pre>
+        </div>
+        
+        <h2 class="mt-5">Sentiment Analysis</h2>
+        
+        <div class="endpoint post">
+            <h3><span class="method post">POST</span> /sentiment</h3>
+            <p>Analyze sentiment of provided text.</p>
+            
+            <h5>Request</h5>
+            <div class="api-url">POST /api/v1/sentiment</div>
+            <pre><code class="language-json">{
+    "text": "Ini adalah contoh teks positif untuk analisis sentimen."
+}</code></pre>
+            
+            <h5>Headers</h5>
+            <pre><code>Authorization: Bearer your-token-here</code></pre>
+            
+            <h5>Response</h5>
+            <pre><code class="language-json">{
+    "status": "success",
+    "timestamp": "2023-08-21T12:34:56.789Z",
+    "message": "Sentiment analysis completed",
+    "data": {
+        "text": "Ini adalah contoh teks positif untuk analisis sentimen.",
+        "language": "id",
+        "sentiment_score": 0.45,
+        "sentiment_label": "Positif",
+        "sentiment_color": "success"
+    }
+}</code></pre>
+        </div>
+        
+        <h2 class="mt-5">Error Responses</h2>
+        <p>All API endpoints return consistent error responses:</p>
+        <pre><code class="language-json">{
+    "status": "error",
+    "timestamp": "2023-08-21T12:34:56.789Z",
+    "message": "Error message details",
+    "code": 400
+}</code></pre>
+        
+        <h3>Common Error Codes</h3>
+        <ul>
+            <li><code>400</code> - Bad Request (missing parameters or invalid format)</li>
+            <li><code>401</code> - Unauthorized (missing or invalid token)</li>
+            <li><code>404</code> - Resource Not Found</li>
+            <li><code>429</code> - Too Many Requests (rate limit exceeded)</li>
+            <li><code>500</code> - Internal Server Error</li>
+        </ul>
+    </main>
+
+    <footer class="bg-light text-center text-muted py-3 mt-5">
+        <div class="container">
+            <p>Farrell Media Monitoring &copy; 2023 - API Documentation</p>
+        </div>
+    </footer>
+</body>
+</html>

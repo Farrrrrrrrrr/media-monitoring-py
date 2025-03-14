@@ -1,0 +1,48 @@
+runtime: python39  # Use Python 3.9 runtime or adjust to your project's Python version
+
+instance_class: F1  
+
+env_variables:
+  FLASK_ENV: "production"
+  APP_BASE_URL: "https://medmon-project.uc.r.appspot.com"  # Replace with your actual domain
+  # Add other environment variables your app needs here
+
+entrypoint: gunicorn -b :$PORT main:app  # Adjust if your main app file has a different name
+
+handlers:
+- url: /static
+  static_dir: static
+  secure: always
+
+- url: /public/static
+  static_dir: public/static
+  secure: always
+
+- url: /css
+  static_dir: public/css
+  secure: always
+
+- url: /js
+  static_dir: public/js
+  secure: always
+
+- url: /api/docs
+  script: auto
+  secure: always
+
+- url: /api/swagger
+  script: auto
+  secure: always
+
+- url: /api/integration
+  script: auto
+  secure: always
+
+- url: /.*
+  script: auto
+  secure: always
+
+automatic_scaling:
+  min_instances: 1
+  max_instances: 5
+  target_cpu_utilization: 0.65

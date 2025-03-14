@@ -22,6 +22,16 @@
                     <li class="nav-item">
                         <a class="nav-link active" href="/">Home</a>
                     </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="apiDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            API
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="apiDropdown">
+                            <li><a class="dropdown-item" href="/api/docs">API Documentation</a></li>
+                            <li><a class="dropdown-item" href="/api/swagger">Swagger UI</a></li>
+                            <li><a class="dropdown-item" href="/api/integration">Integration Examples</a></li>
+                        </ul>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -137,6 +147,48 @@
                 <div id="noArticlesMessage" class="alert alert-warning" style="display:none;">
                     Artikel tidak ditemukan. Coba kata kunci lain. <br>
                     (No articles found. Try a different search term.)
+                </div>
+            </div>
+        </div>
+
+        <!-- API Information Section -->
+        <div class="card mt-4">
+            <div class="card-header bg-info text-white">
+                <h4>API Access Available</h4>
+            </div>
+            <div class="card-body">
+                <p>MediaMon provides a comprehensive API for programmatic access to media monitoring data.</p>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-body text-center">
+                                <i class="fas fa-book fa-2x mb-3"></i>
+                                <h5>API Documentation</h5>
+                                <p>Learn about available endpoints and parameters</p>
+                                <a href="/api/docs" class="btn btn-outline-primary btn-sm">View Docs</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-body text-center">
+                                <i class="fas fa-code fa-2x mb-3"></i>
+                                <h5>Swagger UI</h5>
+                                <p>Interactive API testing and exploration</p>
+                                <a href="/api/swagger" class="btn btn-outline-primary btn-sm">Open Swagger</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-body text-center">
+                                <i class="fas fa-plug fa-2x mb-3"></i>
+                                <h5>Integration Examples</h5>
+                                <p>Code samples in multiple languages</p>
+                                <a href="/api/integration" class="btn btn-outline-primary btn-sm">View Examples</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

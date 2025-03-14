@@ -11,6 +11,30 @@ A media monitoring application that fetches news articles from various sources, 
 - Allows filtering by language
 - Responsive design that works on mobile and desktop
 
+## API Documentation
+
+The MediaMon project includes comprehensive API documentation that can be accessed through the following URLs when the application is running:
+
+1. **API Documentation** - `/api/docs`
+   - Detailed description of all available endpoints
+   - Request/response formats and examples
+   - Authentication instructions
+
+2. **Swagger UI** - `/api/swagger`
+   - Interactive API testing interface
+   - Try out API calls directly from your browser
+   - Explore the full API capabilities
+
+3. **Integration Examples** - `/api/integration`
+   - Code samples in multiple languages (Python, JavaScript, PHP, Java)
+   - Step-by-step integration tutorials
+   - Authentication examples
+
+When the application is deployed to Google App Engine, these pages will be available at:
+- https://your-app-name.appspot.com/api/docs
+- https://your-app-name.appspot.com/api/swagger
+- https://your-app-name.appspot.com/api/integration
+
 ## Deployment Options
 
 ### 1. Firebase Functions and Hosting (Recommended)

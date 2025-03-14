@@ -1,0 +1,48 @@
+# Python and development files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Git files
+.git
+.gitignore
+
+# Local environment
+.env
+.env.example
+firebase.env.example
+
+# Local development files
+*.log
+*.sqlite3
+.vscode/
+.idea/
+.firebase/
+
+# Other files not needed for App Engine
+docker-compose.yml
+Dockerfile
+README.md
+SOCIAL_MEDIA_SETUP.md
+
+# Node.js files
+node_modules/

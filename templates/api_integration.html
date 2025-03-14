@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Integration - Media Monitoring</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">Media Monitoring</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/api/docs">API Docs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/api/swagger">Swagger UI</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/api/integration">Integration</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        <h1>API Integration Examples</h1>
+        <p class="lead">Learn how to integrate with the MediaMon API in different programming languages.</p>
+
+        <div class="row mt-5">
+            <div class="col-md-3">
+                <div class="list-group">
+                    <a href="#python" class="list-group-item list-group-item-action">Python</a>
+                    <a href="#javascript" class="list-group-item list-group-item-action">JavaScript</a>
+                    <a href="#php" class="list-group-item list-group-item-action">PHP</a>
+                    <a href="#java" class="list-group-item list-group-item-action">Java</a>
+                    <a href="#curl" class="list-group-item list-group-item-action">cURL</a>
+                </div>
+            </div>
+
+            <div class="col-md-9">
+                <section id="getting-started" class="mb-5">
+                    <h2>Getting Started</h2>
+                    <p>To use the MediaMon API, you need to:</p>
+                    <ol>
+                        <li>Obtain an API key by <a href="/contact">contacting us</a></li>
+                        <li>Request an authentication token using your API key</li>
+                        <li>Use the token for all subsequent requests</li>
+                    </ol>
+                </section>
+
+                <section id="python" class="mb-5">
+                    <h2>Python</h2>
+                    <h4>Authentication and fetching articles</h4>
+                    <pre><code class="language-python">import requests
+
+# Configuration
+API_BASE_URL = "https://your-domain.com/api/v1"
+API_KEY = "your-api-key"
+
+def get_token():
+    """Get authentication token using API key"""
+    response = requests.post(
+        f"{API_BASE_URL}/auth/token",
+        json={"api_key": API_KEY}
+    )
+    data = response.json()
+    
+    if response.status_code == 200 and data["status"] == "success":
+        return data["data"]["token"]
+    else:
+        raise Exception(f"Authentication failed: {data.get('message', 'Unknown error')}")
+
+def get_articles(query=None, source=None, language=None):
+    """Get articles with optional filters"""
+    # Get authentication token
+    token = get_token()
+    
+    # Prepare query parameters
+    params = {}
+    if query:
+        params["query"] = query
+    if source:
+        params["source"] = source
+    if language:
+        params["language"] = language
+        
+    # Make API request with authorization header
+    response = requests.get(
+        f"{API_BASE_URL}/articles",
+        params=params,
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    
+    data = response.json()
+    
+    if response.status_code == 200 and data["status"] == "success":
+        return data["data"]
+    else:
+        raise Exception(f"API request failed: {data.get('message', 'Unknown error')}")
+
+def analyze_sentiment(text):
+    """Analyze sentiment of a text string"""
+    # Get authentication token
+    token = get_token()
+    
+    # Make API request
+    response = requests.post(
+        f"{API_BASE_URL}/sentiment",
+        json={"text": text},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    
+    data = response.json()
+    
+    if response.status_code == 200 and data["status"] == "success":
+        return data["data"]
+    else:
+        raise Exception(f"Sentiment analysis failed: {data.get('message', 'Unknown error')}")
+
+# Example usage
+if __name__ == "__main__":
+    # Get Indonesian politics articles
+    articles = get_articles(query="politik", language="id")
+    print(f"Retrieved {len(articles)} articles")
+    
+    # Print article titles and sentiment
+    for article in articles[:5]:
+        print(f"Title: {article['title']}")
+        print(f"Sentiment: {article['sentiment_label']} ({article['sentiment_score']})")
+        print("-----")
+    
+    # Analyze custom text
+    text = "Indonesia adalah negara yang indah dengan banyak budaya"
+    sentiment = analyze_sentiment(text)
+    print(f"Sentiment analysis: {sentiment['sentiment_label']} ({sentiment['sentiment_score']})")
+</code></pre>
+                </section>
+
+                <section id="javascript" class="mb-5">
+                    <h2>JavaScript</h2>
+                    <h4>Authentication and fetching articles</h4>
+                    <pre><code class="language-javascript">// MediaMon API Client
+const API_BASE_URL = 'https://your-domain.com/api/v1';
+const API_KEY = 'your-api-key';
+
+// Get authentication token
+async function getToken() {
+    const response = await fetch(`${API_BASE_URL}/auth/token`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ api_key: API_KEY })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok && data.status === 'success') {
+        return data.data.token;
+    } else {
+        throw new Error(`Authentication failed: ${data.message || 'Unknown error'}`);
+    }
+}
+
+// Get articles with optional filters
+async function getArticles(query = null, source = null, language = null) {
+    // Get authentication token
+    const token = await getToken();
+    
+    // Build query string
+    const params = new URLSearchParams();
+    if (query) params.append('query', query);
+    if (source) params.append('source', source);
+    if (language) params.append('language', language);
+    
+    // Make API request
+    const response = await fetch(`${API_BASE_URL}/articles?${params.toString()}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok && data.status === 'success') {
+        return data.data;
+    } else {
+        throw new Error(`API request failed: ${data.message || 'Unknown error'}`);
+    }
+}
+
+// Analyze sentiment of text
+async function analyzeSentiment(text) {
+    // Get authentication token
+    const token = await getToken();
+    
+    // Make API request
+    const response = await fetch(`${API_BASE_URL}/sentiment`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ text })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok && data.status === 'success') {
+        return data.data;
+    } else {
+        throw new Error(`Sentiment analysis failed: ${data.message || 'Unknown error'}`);
+    }
+}
+
+// Example usage
+async function exampleUsage() {
+    try {
+        // Get Indonesian articles about technology
+        const articles = await getArticles('teknologi', null, 'id');
+        console.log(`Retrieved ${articles.length} articles`);
+        
+        // Display first 3 articles
+        articles.slice(0, 3).forEach(article => {
+            console.log(`Title: ${article.title}`);
+            console.log(`Sentiment: ${article.sentiment_label} (${article.sentiment_score})`);
+            console.log('-----');
+        });
+        
+        // Analyze custom text
+        const text = 'Ekonomi Indonesia terus berkembang dengan baik';
+        const sentiment = await analyzeSentiment(text);
+        console.log(`Sentiment analysis: ${sentiment.sentiment_label} (${sentiment.sentiment_score})`);
+    } catch (error) {
+        console.error('Error:', error.message);
+    }
+}
+
+// Run the example
+exampleUsage();</code></pre>
+                </section>
+
+                <section id="php" class="mb-5">
+                    <h2>PHP</h2>
+                    <h4>Authentication and fetching articles</h4>
+                    <pre><code class="language-php">&lt;?php
+// MediaMon API Client in PHP
+
+// Configuration
+$apiBaseUrl = 'https://your-domain.com/api/v1';
+$apiKey = 'your-api-key';
+
+// Get authentication token
+function getToken($apiBaseUrl, $apiKey) {
+    $ch = curl_init($apiBaseUrl . '/auth/token');
+    $payload = json_encode(['api_key' => $apiKey]);
+    
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    $data = json_decode($response, true);
+    
+    if ($httpCode === 200 && $data['status'] === 'success') {
+        return $data['data']['token'];
+    } else {
+        throw new Exception('Authentication failed: ' . ($data['message'] ?? 'Unknown error'));
+    }
+}
+
+// Get articles with optional filters
+function getArticles($apiBaseUrl, $token, $query = null, $source = null, $language = null) {
+    $url = $apiBaseUrl . '/articles';
+    $params = [];
+    
+    if ($query) $params['query'] = $query;
+    if ($source) $params['source'] = $source;
+    if ($language) $params['language'] = $language;
+    
+    if (!empty($params)) {
+        $url .= '?' . http_build_query($params);
+    }
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $token
+    ]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    $data = json_decode($response, true);
+    
+    if ($httpCode === 200 && $data['status'] === 'success') {
+        return $data['data'];
+    } else {
+        throw new Exception('API request failed: ' . ($data['message'] ?? 'Unknown error'));
+    }
+}
+
+// Analyze sentiment of text
+function analyzeSentiment($apiBaseUrl, $token, $text) {
+    $ch = curl_init($apiBaseUrl . '/sentiment');
+    $payload = json_encode(['text' => $text]);
+    
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $token
+    ]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    $data = json_decode($response, true);
+    
+    if ($httpCode === 200 && $data['status'] === 'success') {
+        return $data['data'];
+    } else {
+        throw new Exception('Sentiment analysis failed: ' . ($data['message'] ?? 'Unknown error'));
+    }
+}
+
+// Example usage
+try {
+    // Get authentication token
+    $token = getToken($apiBaseUrl, $apiKey);
+    
+    // Get Indonesian news articles about economy
+    $articles = getArticles($apiBaseUrl, $token, 'ekonomi', 'news', 'id');
+    echo "Retrieved " . count($articles) . " articles\n";
+    
+    // Display a few articles
+    $articlesToShow = array_slice($articles, 0, 3);
+    foreach ($articlesToShow as $article) {
+        echo "Title: " . $article['title'] . "\n";
+        echo "Sentiment: " . $article['sentiment_label'] . " (" . $article['sentiment_score'] . ")\n";
+        echo "-----\n";
+    }
+    
+    // Analyze custom text
+    $text = 'Pertumbuhan ekonomi Indonesia sangat menjanjikan';
+    $sentiment = analyzeSentiment($apiBaseUrl, $token, $text);
+    echo "Sentiment analysis: " . $sentiment['sentiment_label'] . " (" . $sentiment['sentiment_score'] . ")\n";
+    
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+}
+?&gt;</code></pre>
+                </section>
+
+                <section id="java" class="mb-5">
+                    <h2>Java</h2>
+                    <h4>Authentication and fetching articles</h4>
+                    <pre><code class="language-java">import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.HashMap;
+import java.util.Map;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+public class MediaMonApiClient {
+    
+    private final String apiBaseUrl;
+    private final String apiKey;
+    private final HttpClient httpClient;
+    
+    public MediaMonApiClient(String apiBaseUrl, String apiKey) {
+        this.apiBaseUrl = apiBaseUrl;
+        this.apiKey = apiKey;
+        this.httpClient = HttpClient.newHttpClient();
+    }
+    
+    // Get authentication token
+    public String getToken() throws IOException, InterruptedException {
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("api_key", apiKey);
+        
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(apiBaseUrl + "/auth/token"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                .build();
+        
+        HttpResponse<String> response = httpClient.send(request, 
+                HttpResponse.BodyHandlers.ofString());
+        
+        JSONObject responseJson = new JSONObject(response.body());
+        
+        if (response.statusCode() == 200 && responseJson.getString("status").equals("success")) {
+            return responseJson.getJSONObject("data").getString("token");
+        } else {
+            throw new RuntimeException("Authentication failed: " + 
+                    responseJson.optString("message", "Unknown error"));
+        }
+    }
+    
+    // Get articles with optional filters
+    public JSONArray getArticles(String query, String source, String language) 
+            throws IOException, InterruptedException {
+        // Get authentication token
+        String token = getToken();
+        
+        // Build URL with query parameters
+        StringBuilder url = new StringBuilder(apiBaseUrl + "/articles");
+        Map<String, String> params = new HashMap<>();
+        
+        if (query != null) params.put("query", query);
+        if (source != null) params.put("source", source);
+        if (language != null) params.put("language", language);
+        
+        if (!params.isEmpty()) {
+            url.append("?");
+            boolean first = true;
+            for (Map.Entry<String, String> entry : params.entrySet()) {
+                if (!first) {
+                    url.append("&");
+                }
+                url.append(entry.getKey()).append("=").append(entry.getValue());
+                first = false;
+            }
+        }
+        
+        // Make request
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url.toString()))
+                .header("Authorization", "Bearer " + token)
+                .GET()
+                .build();
+        
+        HttpResponse<String> response = httpClient.send(request, 
+                HttpResponse.BodyHandlers.ofString());
+        
+        JSONObject responseJson = new JSONObject(response.body());
+        
+        if (response.statusCode() == 200 && responseJson.getString("status").equals("success")) {
+            return responseJson.getJSONArray("data");
+        } else {
+            throw new RuntimeException("API request failed: " + 
+                    responseJson.optString("message", "Unknown error"));
+        }
+    }
+    
+    // Analyze sentiment of text
+    public JSONObject analyzeSentiment(String text) throws IOException, InterruptedException {
+        // Get authentication token
+        String token = getToken();
+        
+        // Create request body
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("text", text);
+        
+        // Make request
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(apiBaseUrl + "/sentiment"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + token)
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                .build();
+        
+        HttpResponse<String> response = httpClient.send(request, 
+                HttpResponse.BodyHandlers.ofString());
+        
+        JSONObject responseJson = new JSONObject(response.body());
+        
+        if (response.statusCode() == 200 && responseJson.getString("status").equals("success")) {
+            return responseJson.getJSONObject("data");
+        } else {
+            throw new RuntimeException("Sentiment analysis failed: " + 
+                    responseJson.optString("message", "Unknown error"));
+        }
+    }
+    
+    // Example usage
+    public static void main(String[] args) {
+        try {
+            MediaMonApiClient client = new MediaMonApiClient(
+                    "https://your-domain.com/api/v1", "your-api-key");
+            
+            // Get Indonesian news articles
+            JSONArray articles = client.getArticles("politik", null, "id");
+            System.out.println("Retrieved " + articles.length() + " articles");
+            
+            // Display a few articles
+            for (int i = 0; i < Math.min(articles.length(), 3); i++) {
+                JSONObject article = articles.getJSONObject(i);
+                System.out.println("Title: " + article.getString("title"));
+                System.out.println("Sentiment: " + article.getString("sentiment_label") + 
+                        " (" + article.getDouble("sentiment_score") + ")");
+                System.out.println("-----");
+            }
+            
+            // Analyze custom text
+            String text = "Kualitas pendidikan di Indonesia semakin membaik";
+            JSONObject sentiment = client.analyzeSentiment(text);
+            System.out.println("Sentiment analysis: " + sentiment.getString("sentiment_label") + 
+                    " (" + sentiment.getDouble("sentiment_score") + ")");
+            
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}</code></pre>
+                </section>
+
+                <section id="curl" class="mb-5">
+                    <h2>cURL</h2>
+                    <h4>Authentication</h4>
+                    <pre><code class="language-bash"># Get authentication token
+curl -X POST https://your-domain.com/api/v1/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"api_key": "your-api-key"}'
+
+# Example response:
+# {
+#   "status": "success",
+#   "timestamp": "2023-08-22T14:30:45.123Z",
+#   "message": "Authentication successful",
+#   "data": {
+#     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+#   }
+# }
+
+# Store token in a variable for subsequent requests
+TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</code></pre>
+
+                    <h4>Getting Articles</h4>
+                    <pre><code class="language-bash"># Get articles (no filters)
+curl -X GET https://your-domain.com/api/v1/articles \
+  -H "Authorization: Bearer $TOKEN"
+
+# Get Indonesian articles about politics
+curl -X GET "https://your-domain.com/api/v1/articles?query=politik&language=id" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Get articles from Twitter only
+curl -X GET "https://your-domain.com/api/v1/articles?source=twitter" \
+  -H "Authorization: Bearer $TOKEN"</code></pre>
+
+                    <h4>Analyzing Sentiment</h4>
+                    <pre><code class="language-bash"># Analyze sentiment of text
+curl -X POST https://your-domain.com/api/v1/sentiment \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"text": "Pertumbuhan ekonomi Indonesia mengalami percepatan yang signifikan"}'</code></pre>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-light text-center text-muted py-3 mt-5">
+        <div class="container">
+            <p>Farrell Media Monitoring &copy; 2023 - API Documentation</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -7,6 +7,8 @@ feedparser==6.0.8
 textblob==0.15.3
 requests==2.27.1
 nltk==3.8.1
+# JWT for authentication
+PyJWT==2.4.0
 # Using specific lxml version that includes html_clean
 lxml[html_clean]>=4.9.3
 # Social media libraries

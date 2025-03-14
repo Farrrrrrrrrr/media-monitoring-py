@@ -620,49 +620,136 @@ def get_cached_articles(search_query=None):
     
     return sorted(articles, key=lambda x: x.get('published'), reverse=True)
 
-# API Functions (Firebase Functions)
-@https_fn.on_request(cors=options.CorsOptions(cors_origins=["*"], cors_methods=["GET", "POST"]))
+# API helper functions
+def api_response(data=None, message=None, status="success", code=200):
+    """Generate standardized API response"""
+    response = {
+        'status': status,
+        'timestamp': datetime.datetime.now().isoformat()
+    }
+    
+    if message:
+        response['message'] = message
+        
+    if data is not None:
+        response['data'] = data
+        
+    return https_fn.Response(json.dumps(response), status=code, mimetype='application/json')
+
+# API Authentication endpoint for Firebase
+@https_fn.on_request(cors=options.CorsOptions(cors_origins=["*"], cors_methods=["POST"]))
+def auth_token(req: https_fn.Request) -> https_fn.Response:
+    """Get authentication token with API key"""
+    try:
+        data = json.loads(req.data)
+        api_key = data.get('api_key', None)
+    except:
+        return api_response(message="Invalid request format", status="error", code=400)
+    
+    # Check API key (in production, validate against database/environment)
+    valid_api_key = os.environ.get('API_KEY', 'test-api-key')
+    
+    if api_key != valid_api_key:
+        return api_response(message="Invalid API key", status="error", code=401)
+    
+    # Generate JWT token
+    import jwt
+    secret_key = os.environ.get('JWT_SECRET_KEY', 'default-dev-key')
+    token = jwt.encode({
+        'api_key': api_key,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
+    }, secret_key, algorithm="HS256")
+    
+    return api_response(data={'token': token}, message="Authentication successful")
+
+# JWT Authentication middleware for Firebase Functions
+def token_auth_required(func):
+    def wrapper(req: https_fn.Request) -> https_fn.Response:
+        auth_header = req.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return api_response(message="Authentication token is missing", status="error", code=401)
+        
+        token = auth_header.split(' ')[1]
+        
+        try:
+            # Decode token
+            import jwt
+            secret_key = os.environ.get('JWT_SECRET_KEY', 'default-dev-key')
+            jwt.decode(token, secret_key, algorithms=["HS256"])
+        except:
+            return api_response(message="Invalid authentication token", status="error", code=401)
+        
+        return func(req)
+    return wrapper
+
+# API Endpoints
+@https_fn.on_request(cors=options.CorsOptions(cors_origins=["*"], cors_methods=["GET"]))
+@token_auth_required
 def api_articles(req: https_fn.Request) -> https_fn.Response:
-    """API endpoint to get articles"""
+    """API endpoint for articles with filtering"""
     search_query = req.args.get('query', None)
     source_type = req.args.get('source', None)
+    language = req.args.get('language', None)
+    limit = min(int(req.args.get('limit', 30)), 100) if req.args.get('limit') else 30
     
-    # Check if we have cached results less than 30 minutes old
-    cache_valid = True
+    # Get articles from cache or fetch new ones
+    articles = get_cached_articles(search_query)
     
-    if cache_valid:
-        articles = get_cached_articles(search_query)
-        
-        # Filter by source type if specified
-        if source_type and source_type != 'all':
-            articles = [a for a in articles if a.get('type') == source_type]
-            
-        # If we got enough cached articles, return them
-        if len(articles) >= 10:
-            return https_fn.Response(json.dumps({
-                'articles': articles,
-                'source': 'cache'
-            }), mimetype='application/json')
+    # Apply filters
+    if source_type:
+        articles = [a for a in articles if a.get('type', 'news') == source_type]
     
-    # Otherwise fetch fresh articles
-    articles = fetch_articles(search_query)
+    if language:
+        articles = [a for a in articles if a.get('language') == language]
     
-    # Filter by source type if specified
-    if source_type and source_type != 'all':
-        articles = [a for a in articles if a.get('type') == source_type]
+    # Apply limit
+    articles = articles[:limit]
     
-    return https_fn.Response(json.dumps({
-        'articles': articles,
-        'source': 'fresh'
-    }), mimetype='application/json')
+    return api_response(
+        data=articles,
+        message=f"Retrieved {len(articles)} articles"
+    )
 
 @https_fn.on_request(cors=options.CorsOptions(cors_origins=["*"], cors_methods=["GET"]))
+@token_auth_required
 def api_article(req: https_fn.Request) -> https_fn.Response:
     """API endpoint to get a specific article"""
     article_id = req.path.split('/')[-1]
     
     article = get_article(article_id)
-    if article:
-        return https_fn.Response(json.dumps(article), mimetype='application/json')
-    else:
-        return https_fn.Response(json.dumps({'error': 'Article not found'}), status=404, mimetype='application/json')
+    if not article:
+        return api_response(message="Article not found", status="error", code=404)
+    
+    return api_response(data=article, message="Article retrieved successfully")
+
+@https_fn.on_request(cors=options.CorsOptions(cors_origins=["*"], cors_methods=["POST"]))
+@token_auth_required
+def api_sentiment(req: https_fn.Request) -> https_fn.Response:
+    """API endpoint to analyze sentiment of provided text"""
+    try:
+        data = json.loads(req.data)
+        text = data.get('text', '')
+    except:
+        return api_response(message="Invalid request format", status="error", code=400)
+    
+    if not text:
+        return api_response(message="No text provided", status="error", code=400)
+    
+    # Analyze sentiment
+    is_indonesian = contains_indonesian_words(text)
+    analysis = analyze_sentiment(text, is_indonesian)
+    sentiment_score = analysis.sentiment.polarity
+    
+    sentiment_label = "Positif" if sentiment_score > 0 else "Negatif" if sentiment_score < 0 else "Netral"
+    if not is_indonesian:
+        sentiment_label = "Positive" if sentiment_score > 0 else "Negative" if sentiment_score < 0 else "Neutral"
+    
+    result = {
+        'text': text,
+        'language': 'id' if is_indonesian else 'en',
+        'sentiment_score': round(sentiment_score, 2),
+        'sentiment_label': sentiment_label,
+        'sentiment_color': get_sentiment_color(sentiment_score)
+    }
+    
+    return api_response(data=result, message="Sentiment analysis completed")

@@ -11,8 +11,10 @@ import os
 import tweepy
 from facebook_scraper import get_posts
 import instaloader
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # In-memory storage for articles (in a real app, you'd use a database)
 articles = {}
@@ -638,5 +640,28 @@ def article_detail(article_id):
         
     return render_template('article.html', article=article)
 
+# Import and register the API blueprint
+from api import api
+app.register_blueprint(api, url_prefix='/api/v1')
+
+# Add API documentation endpoint
+@app.route('/api/docs')
+def api_docs():
+    """API documentation"""
+    return render_template('api_docs.html')
+
+@app.route('/api/swagger')
+def swagger_ui():
+    """Swagger UI for API documentation"""
+    return render_template('swagger.html')
+
+@app.route('/api/integration')
+def api_integration():
+    """API integration examples"""
+    return render_template('api_integration.html')
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    # Get port from the environment variable (for App Engine)
+    port = int(os.environ.get('PORT', 8080))
+    # Run the app on all interfaces (0.0.0.0)
+    app.run(host='0.0.0.0', port=port, debug=False)

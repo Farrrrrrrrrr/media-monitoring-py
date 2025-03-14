@@ -1,0 +1,361 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "MediaMon API",
+    "description": "API for MediaMon - Indonesian Media Monitoring Application",
+    "version": "1.0.0",
+    "contact": {
+      "email": "contact@example.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "Local Development Server"
+    },
+    {
+      "url": "https://your-firebase-project.web.app/api/v1",
+      "description": "Production Server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "auth",
+      "description": "Authentication operations"
+    },
+    {
+      "name": "articles",
+      "description": "Article management and search"
+    },
+    {
+      "name": "sentiment",
+      "description": "Text sentiment analysis"
+    },
+    {
+      "name": "sources",
+      "description": "Available content sources"
+    }
+  ],
+  "paths": {
+    "/auth/token": {
+      "post": {
+        "tags": ["auth"],
+        "summary": "Get authentication token",
+        "description": "Use an API key to get a JWT token for API access",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "api_key": {
+                    "type": "string",
+                    "description": "API Key for authentication"
+                  }
+                },
+                "required": ["api_key"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "success"},
+                    "timestamp": {"type": "string", "format": "date-time"},
+                    "message": {"type": "string", "example": "Authentication successful"},
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": {"type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "error"},
+                    "timestamp": {"type": "string", "format": "date-time"},
+                    "message": {"type": "string", "example": "Invalid API key"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/articles": {
+      "get": {
+        "tags": ["articles"],
+        "summary": "Get articles",
+        "description": "Fetch articles with optional filtering by query, source type, and language",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "description": "Search query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "description": "Source type (news, twitter, facebook, instagram)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["news", "twitter", "facebook", "instagram"]
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "description": "Content language (id, en)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["id", "en"]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of results (default: 30, max: 100)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            }
+          }
+        ],
+        "security": [
+          {"BearerAuth": []}
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved articles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "success"},
+                    "timestamp": {"type": "string", "format": "date-time"},
+                    "message": {"type": "string", "example": "Retrieved 10 articles"},
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Article"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/articles/{article_id}": {
+      "get": {
+        "tags": ["articles"],
+        "summary": "Get specific article",
+        "description": "Fetch a single article by its ID",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "description": "Article ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {"BearerAuth": []}
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved article",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "success"},
+                    "timestamp": {"type": "string", "format": "date-time"},
+                    "message": {"type": "string", "example": "Article retrieved successfully"},
+                    "data": {
+                      "$ref": "#/components/schemas/Article"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Article not found"
+          }
+        }
+      }
+    },
+    "/sources": {
+      "get": {
+        "tags": ["sources"],
+        "summary": "Get available sources",
+        "description": "Returns all available news and social media sources",
+        "security": [
+          {"BearerAuth": []}
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved sources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "success"},
+                    "timestamp": {"type": "string", "format": "date-time"},
+                    "message": {"type": "string", "example": "Available sources retrieved"},
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "news": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {"type": "string"},
+                              "name": {"type": "string"},
+                              "language": {"type": "string"}
+                            }
+                          }
+                        },
+                        "social_media": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {"type": "string"},
+                              "name": {"type": "string"},
+                              "enabled": {"type": "boolean"}
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sentiment": {
+      "post": {
+        "tags": ["sentiment"],
+        "summary": "Analyze text sentiment",
+        "description": "Performs sentiment analysis on text in English or Indonesian",
+        "security": [
+          {"BearerAuth": []}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "Text to analyze"
+                  }
+                },
+                "required": ["text"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully analyzed sentiment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "success"},
+                    "timestamp": {"type": "string", "format": "date-time"},
+                    "message": {"type": "string", "example": "Sentiment analysis completed"},
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "text": {"type": "string"},
+                        "language": {"type": "string"},
+                        "sentiment_score": {"type": "number"},
+                        "sentiment_label": {"type": "string"},
+                        "sentiment_color": {"type": "string"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Article": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "title": {"type": "string"},
+          "summary": {"type": "string"},
+          "link": {"type": "string", "format": "uri"},
+          "published": {"type": "string", "format": "date-time"},
+          "source": {"type": "string"},
+          "sentiment_score": {"type": "number"},
+          "sentiment_label": {"type": "string"},
+          "sentiment_color": {"type": "string"},
+          "language": {"type": "string"},
+          "type": {"type": "string"}
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
